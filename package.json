@@ -1,0 +1,13 @@
+{
+  "name": "pantallafacil-sockets",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "http": "0.0.0",
+    "https": "^1.0.0",
+    "websocket": "^1.0.26"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
