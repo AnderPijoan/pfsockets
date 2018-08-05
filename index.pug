@@ -1,0 +1,30 @@
+doctype html
+
+html.full
+
+    head
+        title='Pantalla Fácil - Sockets'
+        meta(name="viewport" content="width=device-width initial-scale=1.0 maximum-scale=1.0 user-scalable=no")
+        meta(name="mobile-web-app-capable" content="yes")
+        meta(http-equiv='refresh', content='0; url=https://pantallafacil.tv/')
+        
+        style.
+            .absolute {
+                position:absolute;
+            }
+            .full {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+            }
+                    
+    body.absolute.full(style="background-color:#0275D8")
+
+        .absolute(style="width:70%;height:70%;top:15%;left:15%")
+
+            a(href="http://pantallafacil.com")
+                .full(style="background:url('https://dhrsuosvzax7z.cloudfront.net/pantallafacil/img/logo_full_white.svg') no-repeat center center;background-size:contain")
+
+        script(type="text/javascript").
+            window.location.href = "https://pantallafacil.tv"

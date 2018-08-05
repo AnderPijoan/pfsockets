@@ -1,53 +1,133 @@
-var WebSocketServer = require('websocket').server;
-var http = require('http');
 
-var server = http.createServer( (request, response) => {
-    console.log((new Date()) + ' Received request for ' + request.url);
-    response.writeHead( 301 , { Location : 'https://pantallafacil.tv' } );
-    response.end();
+/**********************************************************************/
+// Create APP
+/**********************************************************************/
 
+var express = require('express');
+var app = global.app = express();
+
+/**********************************************************************/
+// Set PORT
+/**********************************************************************/
+
+app.set('port', 8081);
+
+/**********************************************************************/
+// User HELMET
+/**********************************************************************/
+
+var helmet = require('helmet');
+app.use(helmet());
+
+/**********************************************************************/
+// View engine setup
+/**********************************************************************/
+
+var path = require('path');
+app.set('views', __dirname);
+app.set('view engine', 'pug');
+
+/**********************************************************************/
+// Favicon
+/**********************************************************************/
+
+var favicon = require('serve-favicon');
+app.use(favicon(__dirname + '/favicon.png'));
+
+/**********************************************************************/
+// Cors
+/**********************************************************************/
+
+var cors = require('cors');
+app.use(cors());
+
+/**********************************************************************/
+// Logger mode
+/**********************************************************************/
+
+var logger = require('morgan');
+app.use(logger('dev'));
+
+/**********************************************************************/
+// Body parser
+/**********************************************************************/
+
+var bodyParser = require('body-parser');
+app.use(bodyParser.json()); // NEEDED FOR LOGIN PARSING
+app.use(bodyParser.urlencoded({ extended : true })); // EXTENDED TRUE NEEDE FOR PARSING PAYPAL IPN MESSAGES
+
+/**********************************************************************/
+// Cookie parser
+/**********************************************************************/
+
+var cookieParser = require('cookie-parser');
+app.use(cookieParser());
+
+app.get('/', function (req, res) {
+    res.render('index');
 });
 
-server.listen(8081, function() {
-    console.log((new Date()) + ' Server is listening on port 8080');
+/**********************************************************************/
+// SOCKET ROUTES
+/**********************************************************************/
+
+app.get('/socket/:socket_id', function (req, res) {
+    if( global.io.sockets.adapter.rooms[ req.params.socket_id ] ){
+        res.send( { socket : true } );
+    } else {
+        res.status(400).send( { socket : false } );
+    }
 });
 
-wsServer = new WebSocketServer({
-    httpServer: server,
-    maxReceivedFrameSize: 64*1024*1024,   // 64MiB
-    maxReceivedMessageSize: 64*1024*1024, // 64MiB
-    fragmentOutgoingMessages: false,
-    keepalive: false,
-    disableNagleAlgorithm: false
+app.post('/socket/:socket_id/:signal', function (req, res) {
+    global.io.to( req.params.socket_id ).emit( req.params.signal , req.body );
+    res.send();
 });
 
-function originIsAllowed(origin) {
-  // put logic here to detect whether the specified origin is allowed.
-  return true;
-}
-
-wsServer.on('connect' , connection => {
-     console.log((new Date()) + ' Connection accepted - Protocol Version ' + connection.webSocketVersion);
+app.get('/sockets', function (req, res) {
+    var room_ids = [];
+    for( var i in global.io.sockets.adapter.rooms ){
+        room_ids.push( i );
+    }
+    res.send( room_ids );
 });
 
-wsServer.on('request' , request => {
+/**********************************************************************/
+// Error handlers
+/**********************************************************************/
 
-    var connection = request.accept();
-    console.log((new Date()) + ' Connection accepted.');
+app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('index');
+});
+
+/**********************************************************************/
+// Start SERVER
+/**********************************************************************/
+
+var server = app.listen(app.get('port'), function() {
+    console.log('[SERVER.JS] Express server listening on port', server.address().port);
+});
+
+
+/**********************************************************************/
+// Set SOCKET SERVER and ROOMS
+/**********************************************************************/
+ 
+var io = require('socket.io')(server);
+io.on('connection', function (socket) {
     
-    connection.on('message', message => {
-        if (message.type === 'utf8') {
-            console.log('Received Message: ' + message.utf8Data);
-            connection.sendUTF( message.utf8Data );
-        }
-        else if (message.type === 'binary') {
-            console.log('Received Binary Message of ' + message.binaryData.length + ' bytes');
-            connection.sendBytes( message.binaryData );
+    socket.on( 'join' , function (data) {
+        if( data.socket_id ){ // Register to room = socket
+            socket.join( data.socket_id );
         }
     });
     
-    connection.on('close', (reasonCode, description) => {
-        console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
-    });
-    
 });
+global.io = io;
+
+/**********************************************************************/
+// RUN USING : node server.js
+/**********************************************************************/
+
+module.exports = app;
